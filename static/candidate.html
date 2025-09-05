@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Apply for Job</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb; --border:#1f2937; --btn:#2563eb; --btn-hover:#1d4ed8; }
+    body{margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text);}
+    .container{max-width:900px; margin:40px auto; padding:0 16px;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    h1{margin:0 0 4px 0; font-size:24px;}
+    p.sub{margin:0 0 20px; color:var(--muted); font-size:14px;}
+    .row{display:flex; gap:12px; flex-wrap:wrap;}
+    .field{flex:1 1 260px; display:flex; flex-direction:column; gap:6px;}
+    label{font-size:13px; color:var(--muted);}
+    input[type="text"], input[type="email"], input[type="number"]{ background:#0b1220; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+    input[type="file"]{color:var(--text);}
+    .btn{background:var(--btn); color:#fff; border:none; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer;}
+    .btn:hover{background:var(--btn-hover);}
+    .muted{color:var(--muted); font-size:13px;}
+    .token-box{background:#0b1220; border:1px dashed var(--border); border-radius:10px; padding:10px 12px; color:var(--muted); font-family:ui-monospace, Menlo, Consolas;}
+    .spacer{height:14px;} .center{display:flex; justify-content:flex-end; gap:10px;}
+    .success{color:#22c55e;} .error{color:#ef4444;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Apply for Job</h1>
+      <p class="sub">Fill the details and upload your resume. The server validates PDF format.</p>
+
+      <div id="tokenInfo" class="token-box" style="display:none;"></div>
+      <div class="spacer"></div>
+
+      <form id="applyForm" enctype="multipart/form-data" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="name">Full Name</label>
+            <input name="name" id="name" type="text" placeholder="Your full name" />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input name="email" id="email" type="email" placeholder="you@example.com" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="education">Education</label>
+            <input name="education" id="education" type="text" placeholder="e.g., M.Tech in AI/ML Data Science" />
+          </div>
+          <div class="field">
+            <label for="college">College</label>
+            <input name="college" id="college" type="text" placeholder="e.g., School of Data Science and Forecasting" />
+          </div>
+          <div class="field">
+            <label for="passout">Passout Year</label>
+            <input name="passout" id="passout" type="number" placeholder="e.g., 2026" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="resume">Resume (PDF validated on server)</label>
+          <input name="resume" id="resume" type="file" aria-describedby="resumeHelp" accept="application/pdf,.pdf" />
+          <span id="resumeHelp" class="muted">Max 10MB recommended. PDF required; non-PDFs are rejected by server.</span>
+        </div>
+
+        <div class="spacer"></div>
+        <div class="center">
+          <button class="btn" id="applyBtn" type="submit">Submit Application</button>
+        </div>
+      </form>
+
+      <div class="spacer"></div>
+      <p id="msg" class="muted"></p>
+    </div>
+  </div>
+
+  <script>
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const token = pathParts[pathParts.length - 1];
+    const tokenInfo = document.getElementById('tokenInfo');
+    if (token) { tokenInfo.style.display = 'block'; tokenInfo.textContent = `Job Token: ${token}`; }
+
+    const form = document.getElementById('applyForm');
+    const msg = document.getElementById('msg');
+    const applyBtn = document.getElementById('applyBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = ''; msg.className = 'muted';
+
+      const name = form.name.value.trim();
+      const email = form.email.value.trim();
+      const education = form.education.value.trim();
+      const college = form.college.value.trim();
+      const passout = form.passout.value.trim();
+      const fileList = form.resume.files;
+
+      if (!name || !email || !education || !college || !passout || !fileList || !fileList.length) {
+        msg.textContent = 'Please fill all fields and attach your resume.'; msg.classList.add('error'); return;
+      }
+      const passoutInt = parseInt(passout, 10);
+      if (Number.isNaN(passoutInt)) { msg.textContent = 'Passout year must be a valid number.'; msg.classList.add('error'); return; }
+      form.passout.value = String(passoutInt);
+
+      const fd = new FormData(form); // includes file automatically
+      const rf = fd.get('resume'); console.log('Sending file:', rf && rf.name, rf && rf.type, rf && rf.size);
+
+      applyBtn.disabled = true; applyBtn.textContent = 'Submitting...';
+      try {
+        const res = await fetch(`/api/submit_application/${encodeURIComponent(token)}`, { method: 'POST', body: fd });
+        const text = await res.text(); let data; try { data = JSON.parse(text); } catch { data = { detail: text }; }
+        if (!res.ok) { msg.textContent = (data.detail && (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail))) || 'Submission failed.'; msg.classList.add('error'); }
+        else { msg.textContent = data.message || 'Application submitted successfully.'; msg.classList.add('success'); }
+      } catch (err) {
+        msg.textContent = 'Network error during submission.'; msg.classList.add('error');
+      } finally {
+        applyBtn.disabled = false; applyBtn.textContent = 'Submit Application';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+AI/ML Engineer – Data Science & Generative AI
+
+We are seeking a motivated AI/ML Engineer with strong experience in Generative AI, RAG pipelines, NLP, and computer vision. The ideal candidate will design, develop, and deploy AI-driven solutions, chatbots, and document processing workflows.
+Responsibilities:
+Develop and maintain AI/ML models for document Q&A, chatbots, recommendation systems, and predictive analytics.
+Build RAG pipelines using FAISS, LangChain, and LLMs for real-time, context-aware responses.
+Design and implement data preprocessing, text embedding, chunking, and similarity search workflows.
+Develop interactive web applications and dashboards using Python, Streamlit, React.js, PowerBI, or Tableau.
+Conduct EDA, model training, testing, and evaluation using ML and deep learning algorithms.
+Collaborate with teams to deploy AI solutions and ensure data-driven decision-making.
+Requirements:
+M.Tech in AI, Data Science, or related field (2025 graduates welcome).
+Hands-on experience with Python, MongoDB, MySQL, Git/Github.
+Experience with LangChain, FAISS, NVIDIA embeddings, RAG-based AI workflows.
+Familiarity with deep learning frameworks, NLP, computer vision (YOLO), and LLM-based applications.
+Strong problem-solving skills and ability to work independently.
+Preferred:
+Experience with cloud platforms (Google Cloud) and Generative AI tools.
+Hands-on experience developing automated candidate screening or AI-powered chatbots.

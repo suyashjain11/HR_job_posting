@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HR Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#fbfbfc; --border:#1f2937; --btn:#2563eb; --btn-hover:#1d4ed8; --warn:#f59e0b; }
+    body{margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text);}
+    .container{max-width:1000px; margin:40px auto; padding:0 16px;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    h1{margin:0 0 4px 0; font-size:24px;}
+    p.sub{margin:0 0 16px; color:var(--muted); font-size:14px;}
+    .row{display:flex; gap:12px; flex-wrap:wrap;}
+    .field{flex:1 1 260px; display:flex; flex-direction:column; gap:6px;}
+    label{font-size:13px; color:var(--muted);}
+    input[type="text"], textarea, select{ background:#0b1220; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+    textarea{min-height:100px; resize:vertical;}
+    .btn{background:var(--btn); color:#fff; border:none; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer;}
+    .btn:hover{background:var(--btn-hover);}
+    .btn-secondary{background:#334155;} .btn-secondary:hover{background:#293446;}
+    .token-box{background:#0b1220; border:1px dashed var(--border); border-radius:10px; padding:10px 12px; color:var(--muted); font-family:ui-monospace, Menlo, Consolas;}
+
+    /* banner */
+    .banner{display:none; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#fbbf24; padding:10px 12px; border-radius:10px; margin-bottom:12px; font-size:13px;}
+
+    /* table wrapper to avoid overflow */
+    .table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:10px;}
+
+    table{min-width:860px; width:100%; border-collapse:separate; border-spacing:0; margin:0; table-layout:fixed;}
+    th, td{padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; font-size:13px; background:transparent;}
+    thead th{position:sticky; top:0; background:#0b1220; color:#cbd5e1; z-index:1;}
+    tr:last-child td{border-bottom:none;}
+
+    th.col-date, td.col-date{width: 130px;}
+    th.col-name, td.col-name{width: 220px;}
+    th.col-score, td.col-score{width: 90px;}
+    th.col-email, td.col-email{width: 260px;}
+    th.col-actions, td.col-actions{width: 120px;}
+
+    .wrap{white-space: normal; word-break: break-word; overflow-wrap: anywhere;}
+    .nowrap{white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+
+    .actions{display:flex; gap:8px; align-items:center;}
+    .footer-actions{display:flex; justify-content:flex-end; margin-top:12px;}
+    .muted{color:var(--muted); font-size:13px;}
+    .spacer{height:12px;}
+
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:none;}
+    .modal-card{max-width:740px; margin:6% auto; background:#111827; border:1px solid var(--border); border-radius:12px; padding:18px;}
+    .grid{display:grid; grid-template-columns: 160px 1fr; gap:10px 14px; align-items:flex-start;}
+    .lbl{color:#94a3b8; font-size:13px;}
+    .val{white-space:pre-wrap; line-height:1.35;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>HR Portal</h1>
+      <p class="sub">Create a job, share the apply link, and review applicants.</p>
+
+      <div id="smtpBanner" class="banner"></div>
+
+      <div class="row">
+        <div class="field">
+          <label for="designation">Designation</label>
+          <input id="designation" type="text" placeholder="e.g., AI/ML Engineer" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="jd">Job Description</label>
+        <textarea id="jd" placeholder="Paste the JD here..."></textarea>
+      </div>
+      <div class="row">
+        <button class="btn" id="createJobBtn">Create Job</button>
+      </div>
+      <div class="spacer"></div>
+      <div id="jobMeta" class="token-box" style="display:none;"></div>
+
+      <div class="spacer"></div>
+      <hr style="border:none; border-top:1px solid var(--border);" />
+      <div class="spacer"></div>
+
+      <div class="row">
+        <div class="field" style="flex:1 1 300px;">
+          <label for="tokenInput">Job Token</label>
+          <input id="tokenInput" type="text" placeholder="Enter job token to load applicants" />
+        </div>
+        <div class="field" style="flex:0 0 auto; align-self:flex-end;">
+          <button class="btn" id="loadBtn">Load Applicants</button>
+        </div>
+      </div>
+
+      <div id="tableWrap" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-date">Date</th>
+                <th class="col-name">Name</th>
+                <th class="col-score">ATS</th>
+                <th class="col-email">Email</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="appRows"></tbody>
+          </table>
+        </div>
+        <div class="footer-actions">
+          <button class="btn-secondary btn" id="downloadExcelBtn">Download Excel</button>
+        </div>
+      </div>
+
+      <p class="muted" id="note"></p>
+    </div>
+  </div>
+
+  <!-- Details Modal -->
+  <div id="detailsModal" class="modal">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0; font-size:18px;">Candidate Details</h3>
+        <div class="actions">
+          <button id="acceptBtn" class="btn">Accept</button>
+          <button id="rejectBtn" class="btn btn-secondary">Reject</button>
+          <button id="closeDetails" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="lbl">Name</div><div id="dName" class="val"></div>
+        <div class="lbl">Email</div><div id="dEmail" class="val"></div>
+        <div class="lbl">Applied On</div><div id="dDate" class="val"></div>
+        <div class="lbl">Education</div><div id="dEdu" class="val"></div>
+        <div class="lbl">College</div><div id="dCollege" class="val"></div>
+        <div class="lbl">Passout</div><div id="dPassout" class="val"></div>
+        <div class="lbl">ATS Match</div><div id="dATS" class="val"></div>
+        <div class="lbl">Missing Keywords</div><div id="dMissing" class="val"></div>
+        <div class="lbl">Profile Summary</div><div id="dSummary" class="val"></div>
+        <div class="lbl">Resume</div><div class="val"><a id="dResume" class="btn btn-secondary" target="_blank">Download</a></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const createJobBtn = document.getElementById('createJobBtn');
+    const jdEl = document.getElementById('jd');
+    const desigEl = document.getElementById('designation');
+    const jobMeta = document.getElementById('jobMeta');
+
+    const loadBtn = document.getElementById('loadBtn');
+    const tokenInput = document.getElementById('tokenInput');
+    const tableWrap = document.getElementById('tableWrap');
+    const appRows = document.getElementById('appRows');
+    const note = document.getElementById('note');
+    const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+    const smtpBanner = document.getElementById('smtpBanner');
+
+    const modal = document.getElementById('detailsModal');
+    const closeDetails = document.getElementById('closeDetails');
+    const acceptBtn = document.getElementById('acceptBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
+
+    const dName = document.getElementById('dName');
+    const dEmail = document.getElementById('dEmail');
+    const dDate = document.getElementById('dDate');
+    const dEdu = document.getElementById('dEdu');
+    const dCollege = document.getElementById('dCollege');
+    const dPassout = document.getElementById('dPassout');
+    const dATS = document.getElementById('dATS');
+    const dMissing = document.getElementById('dMissing');
+    const dSummary = document.getElementById('dSummary');
+    const dResume = document.getElementById('dResume');
+
+    let currentToken = '';
+    let currentEmail = '';
+    let smtpConfigured = true;
+
+    closeDetails.onclick = () => modal.style.display = 'none';
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+    createJobBtn.addEventListener('click', async () => {
+      const jd = jdEl.value.trim();
+      const designation = desigEl.value.trim();
+      if (!jd || !designation) { alert('Enter designation and JD'); return; }
+      const fd = new FormData(); fd.append('jd', jd); fd.append('designation', designation);
+      const res = await fetch('/hr/create_job', { method: 'POST', body: fd });
+      if (!res.ok) { alert('Failed to create job'); return; }
+      const data = await res.json();
+      jobMeta.style.display = 'block';
+      jobMeta.innerHTML = `Token: <b>${data.token}</b><br/>Apply Link: <a href="${data.link}" target="_blank">${location.origin}${data.link}</a>`;
+      tokenInput.value = data.token;
+      loadApplicants();
+    });
+
+    loadBtn.addEventListener('click', loadApplicants);
+    downloadExcelBtn.addEventListener('click', () => { window.location.href = '/hr/download_excel'; });
+
+    async function loadApplicants() {
+      const token = tokenInput.value.trim();
+      if (!token) { alert('Enter a token'); return; }
+      note.textContent = 'Loading...';
+      const res = await fetch(`/hr/applicants/${encodeURIComponent(token)}`);
+      if (!res.ok) { note.textContent = 'Failed to load applicants.'; return; }
+      const data = await res.json();
+      currentToken = token;
+      renderApplicants(token, data);
+    }
+
+    function showSmtpBanner(missingText) {
+      smtpConfigured = false;
+      smtpBanner.style.display = 'block';
+      smtpBanner.innerHTML = `Email not configured: ${missingText}.<br/>
+      Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_USE_SSL, SMTP_FROM in .env and restart the server.`;
+    }
+
+    function openDetails(app) {
+      currentEmail = app.email;
+      dName.textContent = app.name || '—';
+      dEmail.textContent = app.email || '—';
+      dDate.textContent = app.created_at || '—';
+      dEdu.textContent = app.education || '—';
+      dCollege.textContent = app.college || '—';
+      dPassout.textContent = app.passout || '—';
+      const ats = app.ats_result || {};
+      dATS.textContent = (ats['JD Match'] || '').toString() || '—';
+      const missing = Array.isArray(ats.MissingKeywords) ? ats.MissingKeywords.join(', ') : (ats.MissingKeywords || '');
+      dMissing.textContent = missing || '—';
+      dSummary.textContent = (ats['Profile Summary'] || '').toString() || '—';
+      dResume.href = `/hr/download_resume/${encodeURIComponent(app.resume_file || '')}`;
+      modal.style.display = 'block';
+    }
+
+    async function updateStatus(newStatus) {
+      if (!currentToken || !currentEmail) return;
+      const fd = new FormData(); fd.append('status', newStatus);
+      const res = await fetch(`/hr/update_status/${encodeURIComponent(currentToken)}/${encodeURIComponent(currentEmail)}`, { method:'POST', body:fd });
+      const text = await res.text(); let data; try{ data=JSON.parse(text);}catch{ data={message:text}; }
+
+      // If backend says SMTP missing, show banner and a clearer alert
+      if (data.email_ok === false && data.email_error && data.email_error.includes('Missing SMTP config')) {
+        showSmtpBanner('Missing SMTP env variables');
+        alert('Status updated (email not configured).');
+      } else {
+        alert(data.message || 'Updated.');
+        if (data.email_ok === false && data.email_error) console.warn('SMTP error:', data.email_error);
+      }
+      modal.style.display = 'none';
+      loadApplicants();
+    }
+
+    acceptBtn.onclick = () => updateStatus('Selected');
+    rejectBtn.onclick = () => updateStatus('Rejected');
+
+    function renderApplicants(token, list) {
+      appRows.innerHTML = '';
+      if (!Array.isArray(list) || list.length === 0) {
+        tableWrap.style.display = 'none'; note.textContent = 'No applicants yet for this token.'; return;
+      }
+      tableWrap.style.display = 'block'; note.textContent = '';
+
+      list.forEach(app => {
+        const tr = document.createElement('tr');
+        const tdC = (t, cls) => { const c=document.createElement('td'); c.textContent = t ?? ''; if (cls) c.className=cls; return c; };
+        tr.appendChild(tdC(app.created_at || '—', 'col-date nowrap'));
+        tr.appendChild(tdC(app.name || '—', 'col-name wrap'));
+        const ats = app.ats_result || {};
+        tr.appendChild(tdC((ats['JD Match'] || '').toString(), 'col-score nowrap'));
+        tr.appendChild(tdC(app.email || '—', 'col-email wrap'));
+
+        const actionTd = document.createElement('td'); actionTd.className='col-actions';
+        const view = document.createElement('button'); view.className='btn btn-secondary'; view.textContent='Details';
+        view.onclick = () => openDetails(app);
+        actionTd.appendChild(view);
+        tr.appendChild(actionTd);
+
+        appRows.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>
